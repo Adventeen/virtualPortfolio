@@ -140,11 +140,11 @@ class Portfolio(object):
         else:
             err = input('Stock not in portfolio')
 
-    def show_graph(self):
-        price1 = get_data(f'{self.data["symbol"][0]}.NS', period='3mo')['Adj Close'].to_list()
+    def show_graph(self, pr):
+        price1 = get_data(f'{self.data["symbol"][0]}.NS', period=pr)['Adj Close'].to_list()
         total = np.array([price * self.data['qty'][0] for price in price1], dtype=np.float64)
         for stock in self.data['symbol']:
-            hist_price = get_data(f'{stock}.NS', period='3mo')['Adj Close'].to_list()
+            hist_price = get_data(f'{stock}.NS', period=pr)['Adj Close'].to_list()
             wt_price = np.array([price * self.data['qty'][self.data['symbol'].index(stock)] for price in hist_price], dtype=np.float64)
             total = np.add(total, wt_price)
 
@@ -154,6 +154,27 @@ class Portfolio(object):
         plt.plot(time, total)
         plt.grid(True)
         plt.show()
+
+    def save_data(self, start):
+        start = datetime.strptime(start, '%m-%d-%Y').date()
+
+        data_file = open(f'{ self.name }_DATA.csv', 'a', newline='')
+        csv_writer = csv.writer(data_file)
+
+        price_data = get_data(f'{self.data["symbol"][0]}.NS', start=start, end=datetime.now())
+        price1 = price_data['Adj Close'].to_list()
+        dates = price_data['Adj Close'].index.to_list()
+        dates = [str(i.date()) for i in dates]
+        total = np.array([price * self.data['qty'][0] for price in price1], dtype=np.float64)
+        for stock in self.data['symbol']:
+            hist_price = get_data(f'{stock}.NS', start=start, end=datetime.now())['Adj Close'].to_list()
+            wt_price = np.array([price * self.data['qty'][self.data['symbol'].index(stock)] for price in hist_price], dtype=np.float64)
+            total = np.add(total, wt_price)
+
+        for i in range(len(total)):
+            csv_writer.writerow([dates[i], total[i]])
+
+        data_file.close()
 
 
     def export_csv(self):
@@ -202,7 +223,11 @@ Quit: QUIT
                     qty = float(input("Enter qty: "))
                     p1.sell(name, qty)
                 elif(ch == 'GRAPH'):
-                    p1.show_graph()
+                    pr = input("Enter period(1d, 5d, 1mo, 3mo, 1y): ")
+                    p1.show_graph(pr)
+                elif(ch == 'SAVE'):
+                    start = input('Enter start date(mm-dd-yyyy): ')
+                    p1.save_data(start)
                 else:
                     p1.export_csv()
                     break
